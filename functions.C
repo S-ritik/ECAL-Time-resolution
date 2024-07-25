@@ -513,7 +513,7 @@ TF1* linear_fit_tgraph()
   return fit1;
 }
 
-void plot_tgraph(TGraphErrors *hist_obs,string plotname, bool plotfit = true)
+void plot_tgraph(TGraphErrors *hist_obs,string plotname, bool plotfit = true, string fitfuncname = "")
 {
   
   TCanvas *cv;
@@ -552,12 +552,22 @@ void plot_tgraph(TGraphErrors *hist_obs,string plotname, bool plotfit = true)
       //TF1 *fit1 = new TF1("fit1", fit_function,0,220,2);
       //fit1->SetParameter(0,1);
       //fit1->SetParameter(1,2);
-      fit1 = time_aeff_fit2();
-      hist_obs->Fit(fit1->GetName());
-      numParams = fit1->GetNpar();
-      params = fit1->GetParameters();
-      paramErrors = fit1->GetParErrors();
-
+      if(fitfuncname == "linear")
+	{
+	  fit1 = linear_fit_tgraph();
+	  hist_obs->Fit(fit1->GetName());
+	  numParams = fit1->GetNpar();
+	  params = fit1->GetParameters();
+	  paramErrors = fit1->GetParErrors();
+	}
+      else
+	{
+	  fit1 = time_aeff_fit2();
+	  hist_obs->Fit(fit1->GetName());
+	  numParams = fit1->GetNpar();
+	  params = fit1->GetParameters();
+	  paramErrors = fit1->GetParErrors();
+	}
     }
   TLatex *latex  = new TLatex();
   latex->SetNDC();
@@ -572,10 +582,15 @@ void plot_tgraph(TGraphErrors *hist_obs,string plotname, bool plotfit = true)
 
   if(fit1 != NULL)
     {
-  if(numParams == 2)
-    iText = TString::Format("#splitline{%s = (%1.1f #pm %1.1f) ps}{%s = (%1.1f #pm %1.1f) ps}",fit1->GetParName(0),params[0],paramErrors[0],fit1->GetParName(1),params[1],paramErrors[1]);
-  if(numParams == 3)
-    iText = TString::Format("#splitline{%s = (%1.1f #pm %1.1f) ps}{#splitline{%s = (%1.1f #pm %1.1f) ps}{%s = (%1.1f #pm %1.1f) ps}}",fit1->GetParName(0),params[0],paramErrors[0],fit1->GetParName(1),params[1],paramErrors[1],fit1->GetParName(2),params[2],paramErrors[2]);
+
+      if(numParams == 2)
+	iText = TString::Format("#splitline{%s = (%1.1f #pm %1.1f) ps}{%s = (%1.1f #pm %1.1f) ps}",fit1->GetParName(0),params[0],paramErrors[0],fit1->GetParName(1),params[1],paramErrors[1]);
+
+      if(numParams == 3)
+	iText = TString::Format("#splitline{%s = (%1.1f #pm %1.1f) ps}{#splitline{%s = (%1.1f #pm %1.1f) ps}{%s = (%1.1f #pm %1.1f) ps}}",fit1->GetParName(0),params[0],paramErrors[0],fit1->GetParName(1),params[1],paramErrors[1],fit1->GetParName(2),params[2],paramErrors[2]);
+
+      if(fitfuncname == "linear")
+	iText = TString::Format("#splitline{%s = (%1.1f #pm %1.1f) }{%s = (%1.1f #pm %1.1f)}",fit1->GetParName(0),params[0],paramErrors[0],fit1->GetParName(1),params[1],paramErrors[1]);
     }
   if(fit1 != NULL)
     latex->DrawLatex(0.8,0.7,iText);
@@ -2890,8 +2905,8 @@ void intercystal_timeresolution()
 
   central_crystal = "C3";
 
-  string target_crystal = "C3D2x2";
-  string ref_crystal[3] = {"C2","B3","B2"};
+  string target_crystal = "C3DL2x2";
+  string ref_crystal[3] = {"B3","B3","B2"};
   string fillvar[] = {"dt_" + central_crystal + "_" + ref_crystal[0] + "_phase_correct","dt_" + central_crystal + "_" + ref_crystal[1] + "_phase_correct","dt_" + central_crystal + "_" + ref_crystal[2] + "_phase_correct","amp_max[" + ref_crystal[0] + "]","amp_max[" + ref_crystal[1] + "]","amp_max[" + ref_crystal[2] + "]","amp_max[" + central_crystal + "]"};
   int nvars = sizeof(fillvar)/sizeof(fillvar[0]);
 
@@ -2942,7 +2957,8 @@ void intercystal_timeresolution()
   //float Aeff_bin_edges[nbins_aeff+1] = {0., 80.0,  150, 300, 550 ,900,1500};
   //float Aeff_bin_edges[nbins_aeff+1] = {0.,  100, 250, 550 ,1500};
   //float Aeff_bin_edges[nbins_aeff+1] = {0., 100.0,  200, 300, 400, 550, 900, 1500};
-  float Aeff_bin_edges[nbins_aeff+1] = {0., 100.0,  200, 300, 400, 550, 1000};
+  float Aeff_bin_edges[nbins_aeff+1] = {0., 100.0,  200, 300, 400, 550, 1000}; /// currently finialised bins
+  //float Aeff_bin_edges[nbins_aeff+1] = {0., 100.0,  200, 250, 320, 400, 550, 1000};
   //float Aeff_bin_edges[nbins_aeff+1] = {0., 80.0,  150, 250, 400, 600, 1000};
 
   string A_eff_C2_refcrystal1 = "1.0 / sqrt( pow(b_rms[" + central_crystal  + "]/amp_max[" + central_crystal + "],2) + pow(b_rms["+ref_crystal[0]+"]/amp_max["+ref_crystal[0]+"],2))"; 
@@ -2977,11 +2993,11 @@ void intercystal_timeresolution()
   //double h1Ycut_max_cut[4] = {-2,4,0,2};
 
   // For bins of Aeff  /// For C3D runs
-  double amp_diff_cut[4] = {0.25,0.3,0.3,0.3};
-  double h1Xcut_min_cut[4] = {4,1,0,-3};
-  double h1Xcut_max_cut[4] = {11,7,5,4};
-  double h1Ycut_min_cut[4] = {-6,-2,-6,-2};
-  double h1Ycut_max_cut[4] = {-1,3,-4,1};
+  // double amp_diff_cut[4] = {0.25,0.3,0.3,0.3};
+  // double h1Xcut_min_cut[4] = {4,1,0,-3};
+  // double h1Xcut_max_cut[4] = {11,7,5,4};
+  // double h1Ycut_min_cut[4] = {-6,-2,-6,-2};
+  // double h1Ycut_max_cut[4] = {-1,3,-4,1};
 
   ///trail
   // double h1Xcut_min_cut[4] = {4,-4,-1,-5};
@@ -2997,11 +3013,11 @@ void intercystal_timeresolution()
   // double h1Ycut_max_cut[4] = {-2,1,-4,-2};
 
   // For bins of Aeff  /// For C3DL runs and B3
-  // double amp_diff_cut[4] = {0.25,0.3,0.3,0.35};
-  // double h1Xcut_min_cut[4] = {-4,-5,-2,-6};
-  // double h1Xcut_max_cut[4] = {1,-1,3,1};
-  // double h1Ycut_min_cut[4] = {-5,-5,-9,-8};
-  // double h1Ycut_max_cut[4] = {-1,1,-4,-2};
+  double amp_diff_cut[4] = {0.25,0.3,0.3,0.35};
+  double h1Xcut_min_cut[4] = {-4,-5,-2,-6};
+  double h1Xcut_max_cut[4] = {1,-1,3,1};
+  double h1Ycut_min_cut[4] = {-5,-5,-9,-8};
+  double h1Ycut_max_cut[4] = {-1,1,-4,-2};
 
   // For bins of Aeff  /// For C3DL runs and B2
   // double amp_diff_cut[4] = {0.25,0.3,0.3,0.35};
@@ -3202,6 +3218,12 @@ void intercystal_timeresolution()
       time_res[1] = new TGraphErrors(nbins_aeff);
       time_res[2] = new TGraphErrors(nbins_aeff);
 
+      TGraphErrors *aeff_vs_beamenergy[5];
+      aeff_vs_beamenergy[0] = new TGraphErrors(nenergies);
+      aeff_vs_beamenergy[1] = new TGraphErrors(nenergies);
+      aeff_vs_beamenergy[2] = new TGraphErrors(nenergies);
+      aeff_vs_beamenergy[3] = new TGraphErrors(nenergies);
+      aeff_vs_beamenergy[4] = new TGraphErrors(nenergies);
       
       for(int iv = 0; iv < 1;iv++)
 	{
@@ -3233,7 +3255,7 @@ void intercystal_timeresolution()
 
 	      for(int ie =0; ie < nenergies; ie++)
 		{
-		  baseline_cut = "amp_max["+reference_crystal+"]>100 && amp_max["+central_crystal+"]> 100 && n_h1X > 0 && n_h1Y > 0 && fabs(amp_max["+reference_crystal+"]-amp_max["+central_crystal+"])/max(amp_max["+reference_crystal+"],amp_max["+central_crystal+"]) <" + to_string(amp_diff_cut[ie]) +  "&& h1X > " + to_string(h1Xcut_min_cut[ie])  + " && h1X < " + to_string(h1Xcut_max_cut[ie]) + " && h1Y > " + to_string(h1Ycut_min_cut[ie])  + " && h1Y < " + to_string(h1Xcut_max_cut[ie]) + " && " + binvar[iv] + " > 40";
+		  baseline_cut = "amp_max["+reference_crystal+"]>100 && amp_max["+central_crystal+"]> 100 && n_h1X > 0 && n_h1Y > 0 && fabs(amp_max["+reference_crystal+"]-amp_max["+central_crystal+"])/max(amp_max["+reference_crystal+"],amp_max["+central_crystal+"]) <" + to_string(amp_diff_cut[ie]) +  "&& h1X > " + to_string(h1Xcut_min_cut[ie])  + " && h1X < " + to_string(h1Xcut_max_cut[ie]) + " && h1Y > " + to_string(h1Ycut_min_cut[ie])  + " && h1Y < " + to_string(h1Xcut_max_cut[ie]) + " && " + binvar[iv] + " > 80";
 
 		  if(ib == 0)
 		    {
@@ -3242,6 +3264,10 @@ void intercystal_timeresolution()
 		      gethist(energies[ie]+"_"+target_crystal+"_"+file_tag+".root",treename,binvar[iv],baseline_cut,1,histall);
 		      if(histall->Integral() >  100)
 			{
+			  aeff_vs_beamenergy[iv]->SetPoint(ie,stof(energies[ie]),histall->GetMean());
+			  aeff_vs_beamenergy[iv]->GetYaxis()->SetTitle(basicvarname[iv].c_str());
+			  aeff_vs_beamenergy[iv]->GetXaxis()->SetTitle("Beam energy (in GeV)");
+			  
 			  if(histallengy == NULL)
 			    histallengy = (TH1D*)histall->Clone(("hist_allernergy_" + basicvarname[iv]).c_str());
 			  else
@@ -3249,11 +3275,16 @@ void intercystal_timeresolution()
 			  plot_hist(histall,str2,energies[ie]+"_energy_time_res_gainall_" + basicvarname[iv] + ".png");
 			}
 		      string amp_max_var[2] = {"amp_max[C3]","amp_max[C2]"};
+		      //string amp_max_var[2] = {"amp_max[C3]/pow(b_rms[C3]","amp_max[C2]/pow(b_rms[C2]"};
 		      for(int i = 0; i < 2 ; i++)
 			{
 			  string str3 = amp_max_var[i];
 			  TH1D* histall2 = new TH1D(("hist_all2_" + amp_max_var[i]).c_str(),("hist" + amp_max_var[i]).c_str(),50,0,6000);
 			  gethist(energies[ie]+"_"+target_crystal+"_"+file_tag+".root",treename,amp_max_var[i],baseline_cut,1,histall2);
+			  aeff_vs_beamenergy[i+3]->SetPoint(ie,stof(energies[ie]),histall2->GetMean());
+			  aeff_vs_beamenergy[i+3]->GetYaxis()->SetTitle(amp_max_var[i].c_str());
+			  aeff_vs_beamenergy[i+3]->GetXaxis()->SetTitle("Beam energy (in GeV)");
+			  
 			  plot_hist(histall2,str3,energies[ie]+"_energy_time_res_gainall_" + amp_max_var[i] + ".png");
 			    
 			}
@@ -3320,15 +3351,15 @@ void intercystal_timeresolution()
 	      //if(iv == 0 && ib < 2 && ib >0 )	      {	      xmin = double(int((xmean - 3*max(0.01,std))*100))/100; xmax = double(int((xmean + 3*max(0.01,std))*100))/100;}
 
 	      if(iv == 0 &&  ib == 0  )	      {xmin = -1.5; xmax = 1;}
-	      if(iv == 0 && ib ==3 )	      {	      xmin = double(int((xmean - 0.8*max(0.01,std))*100))/100; xmax = double(int((xmean + 0.8*max(0.01,std))*100))/100;}
+	      if(iv == 0 && ib ==nbins_aeff-3 )	      {	      xmin = double(int((xmean - 0.8*max(0.01,std))*100))/100; xmax = double(int((xmean + 0.8*max(0.01,std))*100))/100;}
 	      if(iv == 0 && ib ==2 )	      {	      xmin = -0.8; xmax = 0.4;}
-	      if(iv == 0 && ib ==3 )	      {	      xmin = double(int((xmean - 0.7*max(0.01,std))*100))/100; xmax = double(int((xmean + 0.7*max(0.01,std))*100))/100;}
-	      if(iv == 0 && ib >3 )	      {	      xmin = double(int((xmean - 0.6*max(0.01,std))*100))/100; xmax = double(int((xmean + 0.6*max(0.01,std))*100))/100;}
-	      if(iv == 0 && ib == 5 )	      {	      xmin = double(int((xmean - 0.8*max(0.01,std))*100))/100; xmax = double(int((xmean + 0.8*max(0.01,std))*100))/100;}
-	      if(iv == 0 && ib == 6 )	      {	      xmin = double(int((xmean - 0.1*max(0.01,std))*100))/100; xmax = double(int((xmean + 0.1*max(0.01,std))*100))/100;}
-	      //if(iv == 0 && ib ==5 )	      {	      xmin = -0.75; xmax = 0.15;}
-	      //if(iv == 0 && ib ==6 )	      {	      xmin = double(int((xmean - 0.55*max(0.01,std))*100))/100; xmax = double(int((xmean + 0.55*max(0.01,std))*100))/100;}
-//if(iv == 0 && ib == 0 )	      xmin = -0.8;
+	      if(iv == 0 && ib ==nbins_aeff-3 )	      {	      xmin = double(int((xmean - 0.7*max(0.01,std))*100))/100; xmax = double(int((xmean + 0.7*max(0.01,std))*100))/100;}
+	      if(iv == 0 && ib >nbins_aeff-3 )	      {	      xmin = double(int((xmean - 0.6*max(0.01,std))*100))/100; xmax = double(int((xmean + 0.6*max(0.01,std))*100))/100;}
+	      // if(iv == 0 && ib == nbins_aeff-2 )	      {	      xmin = double(int((xmean - 0.8*max(0.01,std))*100))/100; xmax = double(int((xmean + 0.8*max(0.01,std))*100))/100;}
+	      // if(iv == 0 && ib == nbins_aeff-1 )	      {	      xmin = double(int((xmean - 0.1*max(0.01,std))*100))/100; xmax = double(int((xmean + 0.1*max(0.01,std))*100))/100;}
+	      if(iv == 0 && ib ==5 )	      {	      xmin = -0.75; xmax = 0.15;}
+	      if(iv == 0 && ib ==6 )	      {	      xmin = double(int((xmean - 0.55*max(0.01,std))*100))/100; xmax = double(int((xmean + 0.55*max(0.01,std))*100))/100;}
+if(iv == 0 && ib == 0 )	      xmin = -0.8;
 	      //xmin = -3 ; xmax = 3;
 	      if(xmin < -3) {xmin = -3;}
 	      if(xmax > 3 ) { xmax = 3;}
@@ -3336,7 +3367,7 @@ void intercystal_timeresolution()
 	      int nbins = 30;
 	      //if(iv == 0 && ib >3 ) nbins = 20;
 	      //if(iv == 0 && ib > 2 ) nbins = 20;
-	      if(iv == 0 && ib == 5 ) nbins = 20;
+	      if(iv == 0 && ib == nbins_aeff-1 ) nbins = 20;
 	      TH1D *hist_fit = new TH1D((basicfitvarname[iv] + to_string(iv)).c_str(),basicfitvarname[iv].c_str(),nbins,xmin,xmax);
 	      
 	      //hist_fit->Draw();
@@ -3370,12 +3401,16 @@ void intercystal_timeresolution()
 	  //plot_1dhists_withfit(1,hists,str,"all_energy_"+central_crystal+"_gain" + gain_cut[ig]+ "_timeres_vs" + basicfitvarname[iv] + ".png");
 	  plot_tgraph(time_res[iv],"all_energy_"+central_crystal+"_gain" + gain_cut[ig]+ "_timeres_vs" + basicfitvarname[iv] + ".png");
 	}
+    
+      plot_tgraph(aeff_vs_beamenergy[0],"all_energy_"+central_crystal+"_gain" + gain_cut[ig]+ "_beam_energy_vs_" + basicvarname[0] + ".png",true,"linear");
+      plot_tgraph(aeff_vs_beamenergy[3],"all_energy_"+central_crystal+"_gain" + gain_cut[ig]+ "_beam_energy_vs_amp_maxc3_sigma.png",true,"linear");
+      plot_tgraph(aeff_vs_beamenergy[4],"all_energy_"+central_crystal+"_gain" + gain_cut[ig]+ "_beam_energy_vs_amp_maxC2_sigma.png",true,"linear");
     }
 
 
-  ////////////   Time resolution in bins of Aeff
+  ////////////   Time resolution in bins of energy
   
-  for(int ifunc = 5; ifunc < 6; ifunc++)
+  for(int ifunc = 15; ifunc < 6; ifunc++)
     {
       hist_timeres_vs_energy_C2_ref_crystal0[0]->Reset("ICESM");
       hist_timeres_vs_energy_C2_ref_crystal0[1]->Reset("ICESM");
@@ -3394,6 +3429,7 @@ void intercystal_timeresolution()
       time_res[0] = new TGraphErrors(nenergies);
       time_res[1] = new TGraphErrors(nenergies);
       time_res[2] = new TGraphErrors(nenergies);
+
 
       vector<tgraphpair>time_reso_C2_C3_array;
       vector<tgraphpair>time_reso_C2_C1_array;
@@ -3429,7 +3465,7 @@ void intercystal_timeresolution()
 		  time_res[iv]->GetYaxis()->SetTitle("Time resolution of Crystal (in ps)");
 
 	  
-		  evt_sel_cuts = "amp_max["+reference_crystal+"]>100 && amp_max["+central_crystal+"]> 100 && n_h1X > 0 && n_h1Y > 0 && fabs(amp_max["+reference_crystal+"]-amp_max["+central_crystal+"])/max(amp_max["+reference_crystal+"],amp_max["+central_crystal+"]) <" + to_string(amp_diff_cut[ie]) +  "&& h1X > " + to_string(h1Xcut_min_cut[ie])  + " && h1X < " + to_string(h1Xcut_max_cut[ie]) + " && h1Y > " + to_string(h1Ycut_min_cut[ie])  + " && h1Y < " + to_string(h1Xcut_max_cut[ie]) + " && " + binvar[iv] + " > 40";
+		  evt_sel_cuts = "amp_max["+reference_crystal+"]>100 && amp_max["+central_crystal+"]> 100 && n_h1X > 0 && n_h1Y > 0 && fabs(amp_max["+reference_crystal+"]-amp_max["+central_crystal+"])/max(amp_max["+reference_crystal+"],amp_max["+central_crystal+"]) <" + to_string(amp_diff_cut[ie]) +  "&& h1X > " + to_string(h1Xcut_min_cut[ie])  + " && h1X < " + to_string(h1Xcut_max_cut[ie]) + " && h1Y > " + to_string(h1Ycut_min_cut[ie])  + " && h1Y < " + to_string(h1Xcut_max_cut[ie]) + " && " + binvar[iv] + " > 80";
 		  
 		  //cut[ie] = binvar[iv] + " > " + to_string(int(Aeff_bin_edges[ib])) + " && " + binvar[iv] + " < " + to_string(int(Aeff_bin_edges[ib+1])) + " && " + evt_sel_cuts[ie];
 
@@ -3446,6 +3482,7 @@ void intercystal_timeresolution()
 		  mean_aeff_error_L = 1*mean_aeff_values[4];
 		  mean_aeff_error_R = 1*mean_aeff_values[0];
 		  mean_aeff_error = (mean_aeff_error_R + mean_aeff_error_L ) / 2.0;
+
 		  
 		  //evt_sel_cuts += " && " + binvar[iv] + " > " + to_string(int(Aeff_bin_edges[ib])) + " && " + binvar[iv] + " < " + to_string(int(Aeff_bin_edges[ib+1])); 
 		  hist = new TH1D(("hist_" + fillvar[iv] + energies[ie] + gain_cut[ig] ).c_str(),"dt",100,-3,3);
@@ -5307,7 +5344,7 @@ void calculate_clock_period()
 
   double bin_low2[] = {1250};
   double bin_up2[] = {1450};
-  int nbin2[] = {1000};
+  int nbin2[] = {10000};
 
   double bin_low1[] = {30.5};
   double bin_up1[] = {175.5};
@@ -5316,7 +5353,10 @@ void calculate_clock_period()
   if(nvars1_2d != nvars2_2d || nvars1_2d != sizeof(bin_up1)/sizeof(bin_up1[0]) || nvars1_2d != sizeof(nbin1)/sizeof(nbin1[0]) ||  nvars1_2d != sizeof(nbin2)/sizeof(nbin2[0]) ||  nvars1_2d != sizeof(bin_up2)/sizeof(bin_up2[0]))
     {cout<<"No of variable and bin information dont match for 2d histograms"<<endl;exit(0);}
 
-  for(int ie =0; ie <1/* nenergies*/; ie++)
+  TH1D * hist_clock_phase = new TH1D("hist_clock_phase","clock_phase",60,4.1,8.1);
+  vector<double> highs;
+  vector<double> lows;
+  for(int ie =0; ie < nenergies; ie++)
     {
       for(int iv =0; iv < nvars1_2d; iv++)
 	{
@@ -5330,10 +5370,31 @@ void calculate_clock_period()
 	  savehist2d(hist,"energy_" + energies[ie] + "C3_" + "_no_cuts_" + fillvar1_2d[iv] + "_" +  fillvar2_2d[iv],false);
 	  TH1D * h = (TH1D*)hist->ProfileX();
 	  plot_hist(h,"clock time","energy_" + energies[ie] + "_clock_time_vs_clock_amp.png");
-	  
+	  for(int ib=1; ib < h->GetNbinsX()+1; ib++)
+	    {
+	      float bin_prev =h->GetBinContent(max(0,ib-1));
+	      float bin_current = h->GetBinContent(ib);
+	      float bin_next =h->GetBinContent(min(h->GetNbinsX()+1,ib+1));
+	      if(bin_current > bin_prev && bin_current > bin_next)
+		highs.push_back(h->GetXaxis()->GetBinCenter(ib));
+	      if(bin_current < bin_prev && bin_current < bin_next)
+		lows.push_back(h->GetXaxis()->GetBinCenter(ib));
+	    }
 	}
     }
 
+  for(int i=0;i<highs.size()-1;i++)
+    {
+      cout<<highs[i+1] - highs[i]<<endl;
+      hist_clock_phase->Fill(highs[i+1] - highs[i]);
+    }
+  for(int i=0;i<lows.size()-1;i++)
+    {
+      cout<<lows[i+1] - lows[i]<<endl;
+      hist_clock_phase->Fill(lows[i+1] - lows[i]);
+    }
+
+  plot_hist(hist_clock_phase,"preiod of clock","all_energy_without_fitted_clockphase.png");
 
   string fillvar[] = {"fit_period[CLK]"};
 
